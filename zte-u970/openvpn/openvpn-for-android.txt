@@ -1,0 +1,42 @@
+一、获取手机内核配置信息
+内核的配置信息，可以从手机的/proc/config.gz获取。
+$ adb pull /proc/config.gz
+$ gunzip config.gz && mv config .config
+
+二、修改.config
+增加或者修改
+CONFIG_TUN=m
+
+三、获取确切的内核版本字符串
+手机的内核模块在/system/lib/modules目录下。拷贝其中一个到电脑上，如bcmdhd.ko：
+$ /sbin/modinfo bcmdhd.ko | grep vermagic
+vermagic:       2.6.39.4-00003-g993e245 SMP preempt mod_unload ARMv7
+或者直接查看手机上的/proc/version：
+$ adb shell 'cat /proc/version'
+Linux version 2.6.39.4-00003-g993e245 (hanguojun@SCL_XA241_052) (gcc version 4.4.3 (GCC) ) #2 SMP PREEMPT Wed Jun 6 19:08:18 CST 2012
+
+四、修改Makefile：
+SION = 2
+PATCHLEVEL = 6
+SUBLEVEL = 39
+EXTRAVERSION = .4-00003-g993e245
+
+确保和手机的内核版本字符串一致。
+
+五、编译模块
+$ export ARCH=m
+$ export ARCH=arm
+$ export CROSS_COMPILE=arm-eabi-
+$ make driver/net/tun.ko
+编译完成之后，drvier/net/tun.ko。拷贝到手机上，尝试加载，加载成功则可以拷贝到/system/lib/modules目录下。
+
+其他：
+我用的是OpenVPN Installer和OpenVPN Settings。在加载成功tun.ko之后，连接vpn服务器，始终报错：
+FATAL: Linux ifconfig failed: could not execute external program
+尝试了各种在/system/xbin目录下建立ifconfig、route的软链接的方法都无效，最后启动OpenVPN Installer才发现原来新版本的openvpn要求busybox应该在/system/xbin目录下。而我的busybox在/system/bin下，所以
+# ln -s /system/bin/busybox /system/xbin/busybox
+然后就可以正常使用了。
+
+附录：
+1、U970内核源码下载地址：
+http://support.zte.com.cn/support/news/NewsDetail.aspx?newsId=1002402
